@@ -1,0 +1,354 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+using namespace std;
+struct elem
+{
+    int x;
+    elem* next = nullptr;
+    elem* prev = nullptr;
+};
+struct list2
+{
+    elem* first = nullptr;
+    elem* last = nullptr;
+    int count = 0;
+};
+void add(list2& list, int data);
+bool remove(list2& list, int pos);
+void clear(list2& list);
+const int* get(list2 list, int pos);
+bool is_get();
+size_t get_content_length();
+void get_form_data(char*& data);
+void get_param_value(char*& value, const char* param_name, const char* data);
+void str_decode(char*& dec_str, const char* enc_str);
+bool fill_list(list2& list, const char* filename){
+    ifstream f(filename);
+    if (f.is_open())
+    {
+        while (!f.eof())
+        {
+            double x;
+            f >> x;
+            if (f.fail())
+            {
+                clear(list);
+                return false;
+            }
+            add(list, x);
+        }
+        f.close();
+        return true;
+    }
+    else
+    {
+        cout << "file fall" << endl;
+        return false;
+    }
+}
+void show_list(const list2& list, bool reversed = false)
+{
+    elem* curr = reversed ? list.last : list.first;
+    elem* cmp = reversed ? list.first : list.last;
+    if (!curr) cout << "empty list";
+    else while (curr)
+    {
+        cout << curr->x;
+        curr = reversed ? curr->prev : curr->next;
+    }
+}
+bool check(char* value){
+    for (int i = 1; i < strlen(value) - 1; i++){
+        if (value[i] == ' ' && value[i - 1] != ' ' && value[i + 1] != ' ') return true;
+    }
+    return false;
+}
+void fill(list2& list, char* str){
+    for (int i = 0; i < strlen(str); i++){
+        add(list, (int)str[i] - 48);
+    }
+}
+void addition(list2& l1, list2& l2){
+    int a = l1.count;
+    int b = l2.count;
+    elem* cur1 = l1.last;
+    elem* cur2 = l2.last;
+    if (a > b){
+        for (int i = a; i > 1; i--){
+            if (cur2) {
+                cur1->x += cur2->x;
+                cur2 = cur2->prev;
+            }
+            if (cur1->x > 9){
+                cur1->x = cur1->x % 10;
+                cur1->prev->x += 1;
+            }
+            cur1 = cur1->prev;
+        }
+        show_list(l1);
+    }
+    else if (a < b){
+        for (int i = b; i > 1; i--){
+            if (cur1){
+                cur2->x += cur1->x;
+                cur1 = cur1->prev;
+            }
+            if (cur2->x > 9){
+                cur2->x = cur2->x % 10;
+                cur2->prev->x += 1;
+            }
+            cur2 = cur2->prev;
+        }
+        show_list(l2);
+    }
+    else{
+        for (int i = b; i > 0; i--){
+            cur1->x += cur2->x;
+            if (i > 1 && cur1->x > 9){
+                cur1->x = cur1->x % 10;
+                cur1->prev->x += 1;
+            }
+            if (i == 1 && cur1->x > 9){
+                cur1->x = cur1->x % 10;
+                cout << 1;
+            }
+            cur1 = cur1->prev;
+            cur2 = cur2->prev;
+        }
+        show_list(l1);
+    }
+
+}
+void show_menu() {
+    cout << "<div><a href = 'index.cgi'> Главная страница </a></div>";
+    cout << "<div><a href = 'one.cgi'> Задание №1 </a></div>";
+    cout << "<div><a href = 'two.cgi'> Задание №2 </a></div>";
+}
+void show_content(){
+    list2 l1, l2;
+    cout << "<form method='get' action='5.cgi'>";
+    cout << "Введите через пробел числа:";
+    cout<< "<input type = 'text' class = 'enter' name = 'dlist'>";
+    cout << "<input type='submit' value='Отправить' class='button'></input>";
+    cout << "</form>";
+    cout << "Итоговое выражание:";
+    cout << "<div class = 'output'>";
+    char* data = nullptr;
+    get_form_data(data);
+    if ((data && strlen(data)) > 0) {
+        char* value = nullptr;
+        get_param_value(value, "dlist", data);
+        if (check(value)){
+            char* context = nullptr;
+            char* number = strtok_s(context, " ", &value);
+            fill(l1, number);
+            fill(l2, value);
+            show_list(l1);
+            cout << " + ";
+            show_list(l2);
+            cout << " = ";
+            addition(l1, l2);
+        }
+        else{
+            cout << "Ошибка ввода";
+        }
+    }
+    cout << "</div>";
+}
+
+void main()
+{
+    setlocale(LC_ALL, "Russian");
+    cout << "Content-type: text/html; charset=Windows-1251\n\n";
+    ifstream f("one.html");
+    if (f.is_open()){
+        auto sz = 65536;
+        auto buf = new char[sz];
+        while (!f.eof()){
+            f.getline(buf, sz);
+            if (!strcmp(buf, "<!--#MENU#-->")) {
+                show_menu();
+            }
+            if (strcmp(buf, "<!--#CONTENT#-->") == 0){
+                show_content();
+            }
+            cout << buf;
+        }
+        delete[] buf;
+        f.close();
+    }
+    else{
+        cout << "файл не открылся";
+    }
+}
+void add(list2& list, int data){
+    elem* newel = new elem;
+    newel->x = data;
+    list.count++;
+    if (!list.first){
+        list.first = list.last = newel;
+    }
+    else{
+        newel->prev = list.last;
+        list.last->next = newel;
+        list.last = newel;
+    }
+}
+bool remove(list2& list, int pos){
+    if (pos < 0 || pos >= list.count){
+        return false;
+    }
+    list.count--;
+    if (pos == 0){
+        elem* rem = list.first;
+        list.first = list.first->next;
+        if (list.first) list.first->prev = nullptr;
+        delete rem;
+        return true;
+    }
+    if (pos == list.count){
+        elem* rem = list.last;
+        list.last = list.last->prev;
+        list.last->next = nullptr;
+        delete rem;
+        return true;
+    }
+    bool flw = (pos <= list.count / 2);
+    int p = 1;
+    elem* curr;
+    if (flw){
+        curr = list.last->next;
+    }
+    else{
+        curr = list.last->prev;
+        pos = list.count - pos;
+    }
+    while (p < pos){
+        curr = flw ? curr->next : curr->prev;
+        p++;
+    }
+    curr->prev->next = curr->next;
+    curr->next->prev = curr->prev;
+    delete curr;
+    return true;
+
+}
+void clear(list2& list){
+    elem* rem;
+    while (list.first){
+        rem = list.first;
+        list.first = list.first->next;
+        delete rem;
+    }
+    list.last = nullptr;
+    list.count = 0;
+}
+const int* get(list2 l, int pos){
+    if (!l.first && pos < 0 || pos >= l.count) return nullptr;
+    if (!pos) return &l.first->x;
+    if (pos == l.count - 1) return &l.last->x;
+    int p = 1;
+    bool fwd = pos <= l.count / 2;
+    elem* curr;
+    if (fwd) curr = l.first->next;
+    else{
+        curr = l.last->prev;
+        pos = l.count - pos - 1;
+    }
+    while (curr && p < pos){
+        p++;
+        curr = fwd ? curr->next : curr->prev;
+    }
+    return &curr->x;
+}
+bool is_get(){
+    size_t realsize;
+    char* value = new char[5];
+    getenv_s(&realsize, value, 5, "REQUEST_METHOD");
+    bool res = !_strcmpi(value, "GET");
+    delete[] value;
+    return res;
+}
+size_t get_content_length(){
+    size_t realsize;
+    char* value = new char[11];
+    getenv_s(&realsize, value, 11, "CONTENT_LENGTH");
+    size_t size;
+    if (!realsize) size = 0;
+    else sscanf_s(value, "%d", &size);
+    delete[] value;
+    return size;
+}
+void get_form_data(char*& data){
+    delete[] data;
+    if (is_get()){
+        size_t realsize;
+        char* value = new char[65536];
+        getenv_s(&realsize, value, 65536, "QUERY_STRING");
+        data = new char[realsize + 1];
+        strcpy_s(data, realsize + 1, value);
+        delete[] value;
+    }
+    else{
+        size_t buf_size = get_content_length();
+        data = new char[buf_size + 1];
+        fread_s(
+            data,
+            buf_size + 1,
+            sizeof(char),
+            buf_size,
+            stdin
+        );
+        data[buf_size] = 0;
+    }
+}
+void get_param_value(char*& value, const char* param_name, const char* data){
+    delete[] value;
+    value = nullptr;
+    char* str = _strdup(data);
+    char* tmp = str;
+    char* cont;
+    while (char* part = strtok_s(tmp, "&", &cont)){
+        tmp = nullptr;
+        char* val;
+        char* key = strtok_s(part, "=", &val);
+        if (!_strcmpi(param_name, key)){
+            str_decode(value, val);
+            delete[] str;
+            return;
+        }
+    }
+    delete[] str;
+    value = new char[1];
+    value[0] = 0;
+}
+void str_decode(char*& dec_str, const char* enc_str){
+    char* res = new char[strlen(enc_str) + 1];
+    int i = 0, j = 0;
+    while (enc_str[i]){
+        if (enc_str[i] == '+'){
+            res[j] = ' ';
+        }
+        else{
+            if (enc_str[i] == '%'){
+                char ch[3] = { enc_str[i + 1], enc_str[i + 2], 0 };
+                int c;
+                sscanf_s(ch, "%X", &c);
+                res[j] = c;
+                i += 2;
+            }
+            else{
+                res[j] = enc_str[i];
+            }
+        }
+        i++;
+        j++;
+    }
+    res[j] = 0;
+    size_t len = strlen(res) + 1;
+    delete[] dec_str;
+    dec_str = new char[len];
+    strcpy_s(dec_str, len, res);
+    delete[] res;
+}
